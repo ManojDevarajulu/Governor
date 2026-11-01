@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "governor-ai"
+version = "0.1.0"
+description = "Measuring and Containing Stop-Instruction Persistence in Long Agent Trajectories"
+readme = "README.md"
+authors = [{ name = "Manoj Devarajulu" }]
+license = { text = "MIT" }
+keywords = [
+    "ai-safety",
+    "agent-control",
+    "evaluation",
+    "inspect-ai",
+    "alignment",
+    "boundary-persistence",
+    "sandboxing"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+]
+inspect = [
+    "inspect-ai>=0.3.0",
+]
+
+[project.scripts]
+governor = "src.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ManojDevarajulu/governor"
+Repository = "https://github.com/ManojDevarajulu/governor"
