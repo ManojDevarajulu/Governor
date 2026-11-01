@@ -95,13 +95,21 @@ def lint_file(file_path: str) -> List[LintViolation]:
     return visitor.violations
 
 
+# Modules explicitly designated for external model transport (Ollama/vLLM/OpenAI/Anthropic)
+# All other modules (sandbox, interceptors, scenarios, evaluator) must remain strictly hermetic.
+NETWORK_TRANSPORT_DIRS = {"models"}
+
+
 def lint_paths(paths: List[str]) -> Tuple[int, List[LintViolation]]:
     total_violations: List[LintViolation] = []
     for p in paths:
         if os.path.isfile(p) and p.endswith(".py"):
             total_violations.extend(lint_file(p))
         elif os.path.isdir(p):
-            for root, _, files in os.walk(p):
+            for root, dirs, files in os.walk(p):
+                # Skip model transport adapters from hermetic determinism checks
+                if any(part in NETWORK_TRANSPORT_DIRS for part in root.split(os.sep)):
+                    continue
                 for f in files:
                     if f.endswith(".py"):
                         full = os.path.join(root, f)

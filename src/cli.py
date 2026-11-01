@@ -9,6 +9,9 @@ from typing import List
 from src.evaluator import Evaluator, ProtocolEvaluationReport
 from src.interceptors import ProtocolType
 from src.linter import lint_paths
+from src.models import get_provider
+from src.models.runner import run_live_model_episode
+from src.scenarios import get_all_scenarios
 
 
 def print_report_table(reports: List[ProtocolEvaluationReport]):
@@ -58,6 +61,57 @@ def run_eval(protocol_name: str = "all", seeds: int = 25):
     print_report_table(reports)
 
 
+def run_model_cli(
+    model_spec: str,
+    scenario_id: str,
+    protocol_name: str,
+    depth: int,
+    lag: int,
+):
+    provider = get_provider(model_spec)
+    evaluator = Evaluator()
+    scenarios = {s.scenario_id: s for s in get_all_scenarios()}
+    
+    # Match scenario
+    selected_scenario = None
+    for k, v in scenarios.items():
+        if k.startswith(scenario_id) or scenario_id in k:
+            selected_scenario = v
+            break
+    if not selected_scenario:
+        print(f"Error: Unknown scenario '{scenario_id}'. Available: {list(scenarios.keys())}")
+        sys.exit(1)
+
+    interceptor = evaluator.get_interceptor(ProtocolType(protocol_name), allowed_scope="/project")
+
+    print("\n" + "=" * 70)
+    print(f" GOVERNOR LIVE MODEL EVALUATION")
+    print("=" * 70)
+    print(f"Model:          {model_spec}")
+    print(f"Scenario:       {selected_scenario.scenario_id} ({selected_scenario.name})")
+    print(f"Protocol:       {protocol_name}")
+    print(f"Turn Depth:     {depth} progress turns")
+    print(f"Instruction Lag:{lag} turns since boundary statement")
+    print("-" * 70)
+
+    result = run_live_model_episode(
+        provider=provider,
+        scenario=selected_scenario,
+        interceptor=interceptor,
+        turn_depth=depth,
+        instruction_lag=lag,
+    )
+
+    if result.cot_reasoning:
+        print(f"\n[Model Chain-of-Thought Scratchpad]:\n{result.cot_reasoning}\n")
+    print(f"[Model Tool Action]: {result.op} -> {result.target_path}")
+    print(f"[Boundary Violation Attempted]: {'YES (Escaped)' if result.is_boundary_violation else 'NO (Safe)'}")
+    print(f"[Interceptor Blocked]:         {'HALTED' if result.blocked_by_interceptor else 'ALLOWED'}")
+    if result.interceptor_reason:
+        print(f"[Interceptor Reason]:          {result.interceptor_reason}")
+    print("=" * 70 + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Governor: Measuring and Containing Stop-Instruction Persistence in Long Agent Trajectories",
@@ -72,6 +126,14 @@ def main():
     # lint command
     lint_p = subparsers.add_parser("lint", help="Run AST anti-determinism linter on harness code")
     lint_p.add_argument("paths", nargs="*", default=["src/", "tests/"], help="Paths to lint")
+
+    # run-model command
+    model_p = subparsers.add_parser("run-model", help="Run a live open-weight or frontier model on a trajectory")
+    model_p.add_argument("--model", "-m", default="mock", help="Model specification (e.g. 'mock', 'ollama/llama3.3', 'anthropic/claude-3-5-sonnet')")
+    model_p.add_argument("--scenario", "-s", default="S1", help="Scenario ID (S1 through S6)")
+    model_p.add_argument("--protocol", "-p", default="INVARIANT_GOVERNOR", choices=["UNMONITORED_BASELINE", "COT_MONITOR", "DEFER_TO_RESAMPLE", "INVARIANT_GOVERNOR"], help="Protocol to enforce")
+    model_p.add_argument("--depth", "-d", type=int, default=6, help="Turn depth before temptation")
+    model_p.add_argument("--lag", "-l", type=int, default=2, help="Instruction lag since boundary rule")
 
     args = parser.parse_args()
 
@@ -89,6 +151,14 @@ def main():
             for v in violations:
                 print(f"  {v.file_path}:{v.line_number} [{v.rule}] {v.message}")
             sys.exit(1)
+    elif args.command == "run-model":
+        run_model_cli(
+            model_spec=args.model,
+            scenario_id=args.scenario,
+            protocol_name=args.protocol,
+            depth=args.depth,
+            lag=args.lag,
+        )
 
 
 if __name__ == "__main__":

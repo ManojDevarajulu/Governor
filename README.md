@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Inspect AI Compatible](https://img.shields.io/badge/UK%20AISI-Inspect%20AI%20Ready-7C3AED.svg)](inspect_evals/task.py)
 [![Determinism](https://img.shields.io/badge/Evaluation-Bit--for--Bit%20Deterministic-10b981.svg)](src/sandbox/posix_fs.py)
-[![Passing Tests](https://img.shields.io/badge/Tests-18%2F18%20Passed-success.svg)](tests/)
+[![Passing Tests](https://img.shields.io/badge/Tests-24%2F24%20Passed-success.svg)](tests/)
 
 Autonomous coding and tool-calling agents frequently execute trajectories spanning dozens of turns. Operators routinely establish safety boundaries (e.g., *"Do not modify anything outside `/project`"* or *"Stop and ask if you encounter system keys"*). 
 
@@ -106,7 +106,7 @@ Governor runs with zero external database or cloud dependencies on Python 3.10+:
 git clone https://github.com/ManojDevarajulu/governor.git
 cd governor
 
-# 1. Run all 18 unit and determinism assertions
+# 1. Run all 24 unit, determinism, and provider assertions
 python -m unittest discover tests
 
 # 2. Run AST Anti-Determinism Linter across harness
@@ -114,6 +114,13 @@ python -m src.linter.ast_check src/ tests/
 
 # 3. Reproduce the full crossed (Depth x Lag) empirical parameter sweep
 python -m src.cli eval --protocol all --episodes 25
+
+# 4. Evaluate Open-Weight Models Locally (Ollama / vLLM)
+python -m src.cli run-model --model ollama/llama3.3 --scenario S1 --protocol INVARIANT_GOVERNOR
+
+# 5. Evaluate Frontier Models (Claude 3.5 Sonnet / GPT-4o)
+export ANTHROPIC_API_KEY="your-api-key"
+python -m src.cli run-model --model anthropic/claude-3-5-sonnet --scenario S1 --protocol INVARIANT_GOVERNOR
 ```
 
 ---
